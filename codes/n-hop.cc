@@ -75,21 +75,22 @@ int main(int argc, char** argv) {
   }
 
   // read subnode
-  bitmap_spec_t existed(graph_info.vertices_);
+  // bitmap_spec_t existed(graph_info.vertices_);
+  std::shared_ptr<bitmap_spec_t> existed(new bitmap_spec_t(graph_info.vertices_ + 1));
   existed.clear();
   {
     std::ifstream fin{FLAGS_subnode};
     // std::unordered_set subnode;
     int u;
     while (fin >> u) {
-      existed.set_bit(u);
+      existed->set_bit(u);
       // subnode.insert(u);
     }
   }
 
-// plato::bsp_opts_t opts;
-// opts.local_capacity_ = PAGESIZE;
-// opts.global_size_ = MBYTES;
+plato::bsp_opts_t opts;
+opts.local_capacity_ = PAGESIZE;
+opts.global_size_ = MBYTES;
 
   std::shared_ptr<path_state_t> curr_path(new path_state_t(graph_info.max_v_i_, pdcsc->partitioner()));
   std::shared_ptr<path_state_t> next_path(new path_state_t(graph_info.max_v_i_, pdcsc->partitioner()));
@@ -108,28 +109,44 @@ int main(int argc, char** argv) {
   for (uint32_t epoch_i = 0; epoch_i < FLAGS_n && actives < FLAGS_num; ++epoch_i) {
     if (0 == cluster_info.partition_id_) {
       LOG(INFO) << "[epoch-" << epoch_i  << "] init-next cost: "
-        << watch.show("t_oneround") / 1000.0 << "s";
+        << watch.show("t_oneround") / 1000.0 << "s" << "\nactives :" << actives;
     }
     watch.mark("t_oneround");
 
     if (epoch_i == 0) {
-      actives = plato::aggregate_message<std::vector<std::vector<int>>, int, graph_spec_t> (*pdcsc,
-        [&](const context_spec_t& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
-          if (!existed.get_bit(v_i)) { return; }
+      plato::vid_t newers = next_path->foreach<int> (
+      [&](plato::vid_t v_i, std::vector<std::vector<int>>* path) {
+        // LOG(INFO) << "node : " << v_i;
+        // for (auto perpath : (*path)) {
+        //   std::string log; 
+        //   for (auto vnode : perpath) {
+        //     log += std::to_string(vnode) + ",";
+        //   }
+        //   LOG(INFO) << log;
+        // }
+        std::vector<std::vector<int>> path_bin;
+        path_bin.push_back(std::vector<int>(1, v_i));
+        return (*path).push_back(path_bin);
+      },
+      existed.get()
+    );
+      // actives = plato::aggregate_message<std::vector<std::vector<int>>, int, graph_spec_t> (*pdcsc,
+      //   [&](const context_spec_t& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
+      //     if (!existed.get_bit(v_i)) { return; }
 
-          std::vector<std::vector<int>> path_bin;
-          path_bin.push_back(std::vector<int>(1, v_i));
-          context.send(message_spec_t { v_i, path_bin });
-        },
-        [&](int /*p_i*/, message_spec_t& msg) {
-          vector_mutex.lock();
-          for (auto path : msg.message_) {
-            (*next_path)[msg.v_i_].push_back(path);
-          }
-          vector_mutex.unlock();
-          return 1;
-        }
-      );
+      //     std::vector<std::vector<int>> path_bin;
+      //     path_bin.push_back(std::vector<int>(1, v_i));
+      //     context.send(message_spec_t { v_i, path_bin });
+      //   },
+      //   [&](int /*p_i*/, message_spec_t& msg) {
+      //     vector_mutex.lock();
+      //     for (auto path : msg.message_) {
+      //       (*next_path)[msg.v_i_].push_back(path);
+      //     }
+      //     vector_mutex.unlock();
+      //     return 1;
+      //   }
+      // );
     } else {
       actives = plato::aggregate_message<std::vector<std::vector<int>>, int, graph_spec_t> (*pdcsc,
         [&](const context_spec_t& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
@@ -165,7 +182,7 @@ int main(int argc, char** argv) {
 // }
 // LOG(INFO) << msg.v_i_ << " : " << log;
 
-            if (path.size() >= std::max(FLAGS_k,(uint32_t)2) && path[0] == path[path.size()-1]) {
+            if (path.size() >= std::max(FLAGS_k,(uint32_t)4) && path[0] == path[path.size()-1]) {
               (*found_path)[msg.v_i_].push_back(path);
             } else {
               (*next_path)[msg.v_i_].push_back(path);
@@ -173,7 +190,7 @@ int main(int argc, char** argv) {
           }
           return 1;
         }
-// ,opts
+        ,opts
       );
     }
 
