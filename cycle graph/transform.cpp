@@ -26,11 +26,11 @@ int main(int argc, char ** argv)
     int p_range = atoi(argv[2]);
 
     // file location
-    string pre_pkp = "./person_knows_person/part-";
-    string pre_p = "./person/part-";
+    string pre_pkp = "/apsarapangu/disk1/ldbc-data/social_network_person.300/person_knows_person/part-";
+    string pre_p = "/apsarapangu/disk1/ldbc-data/social_network_person.300/person/part-";
 
-    string output_pkp = "./person_knows_person.csv";
-    string output_p = "./person.txt";
+    string output_pkp = "/apsarapangu/disk1/ldbc-data/social_network_person.300/person_knows_person.csv";
+    string output_p = "/apsarapangu/disk1/ldbc-data/social_network_person.300/person.txt";
     string output_map = "./node_map.txt";
 
     // deal with pkp
