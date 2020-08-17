@@ -87,6 +87,10 @@ int main(int argc, char** argv) {
     }
   }
 
+// plato::bsp_opts_t opts;
+// opts.local_capacity_ = PAGESIZE;
+// opts.global_size_ = MBYTES;
+
   std::shared_ptr<path_state_t> curr_path(new path_state_t(graph_info.max_v_i_, pdcsc->partitioner()));
   std::shared_ptr<path_state_t> next_path(new path_state_t(graph_info.max_v_i_, pdcsc->partitioner()));
   std::shared_ptr<path_state_t> found_path(new path_state_t(graph_info.max_v_i_, pdcsc->partitioner()));
@@ -129,12 +133,12 @@ int main(int argc, char** argv) {
     } else {
       actives = plato::aggregate_message<std::vector<std::vector<int>>, int, graph_spec_t> (*pdcsc,
         [&](const context_spec_t& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
-          if (!existed.get_bit(v_i)) { return; }
+          // if (!existed.get_bit(v_i)) { return; }
 
           std::vector<std::vector<int>> path_bin;
           for (auto it = adjs.begin_; adjs.end_ != it; ++it) {
             plato::vid_t src = it->neighbour_;
-            if (!existed.get_bit(src)) { continue; }
+            // if (!existed.get_bit(src)) { continue; }
 // LOG(INFO) << src << " is nbr of " << v_i;
             for (auto vpath: (*curr_path)[src]) {
               bool is_conflict = ((vpath.size() == 1 && vpath[0] == v_i) ? true : false);
@@ -169,6 +173,7 @@ int main(int argc, char** argv) {
           }
           return 1;
         }
+// ,opts
       );
     }
 
@@ -223,14 +228,17 @@ int main(int argc, char** argv) {
     plato::thread_local_fs_output os(FLAGS_output, (boost::format("%04d_") % cluster_info.partition_id_).str(), true);
     found_path->foreach<int> (
       [&](plato::vid_t v_i, std::vector<std::vector<int>>* path) {
+        if ((*path).size() == 0) return 0;
         auto& fs_output = os.local();
-        fs_output << "node : " << v_i << "\n";
-        for (auto perpath : (*path)) {
-          for (auto vnode : perpath) {
-            fs_output << vnode << ",";
-          }
-          fs_output << "\n";
-        }
+
+        fs_output << "node : " << v_i << ' ' << (*path).size() << "\n";
+        // fs_output << "node : " << v_i << "\n";
+        // for (auto perpath : (*path)) {
+        //   for (auto vnode : perpath) {
+        //     fs_output << vnode << ",";
+        //   }
+        //   fs_output << "\n";
+        // }
         return 0;
       }
     );
