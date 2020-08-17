@@ -96,8 +96,14 @@ int main(int argc, char ** argv)
         printf("%d\n", old_to_new_[node]);
     }
     fout = freopen(output_map.c_str(), "w", stdout);
+    int v[4] = {3800,10244,3235,4173};
     for (auto pair : old_to_new_) {
-        printf("%d %d\n", pair.first, pair.second);
+        for (int i = 0; i < 4; ++i) {
+            if (v[i] == pair.first) {
+                printf("%d %d\n", pair.first, pair.second);
+                break;
+            }
+        }
     }
 
     // freopen("CON", "w", stdout);///dev/console
