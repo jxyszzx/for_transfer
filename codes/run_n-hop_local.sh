@@ -14,19 +14,15 @@ INPUT=${INPUT:="$ROOT_DIR/data/graph/nodes.csv"}
 # INPUT=${INPUT:="$ROOT_DIR/data/graph/v100_e2150_ua_c3.csv"}
 SUBNODE=${SUBNODE:="$ROOT_DIR/data/graph/nodes.txt"}
 OUTPUT=${OUTPUT:="/tmp/n-hop"}
-IS_DIRECTED=${IS_DIRECTED:=true}
+IS_DIRECTED=${IS_DIRECTED:=false}
 N=${N:=5}
-K=${K:=3}
-NUM=${NUM:=3}
-#EPS=${EPS:=0.0001}
-#DAMPING=${DAMPING:=0.85}
-#ITERATIONS=${ITERATIONS:=100}
+K=${K:=4}
+NUM=${NUM:=2000}
 
 # param
 PARAMS+=" --threads ${WCORES}"
 PARAMS+=" --input ${INPUT} --output ${OUTPUT} --is_directed=${IS_DIRECTED}"
 PARAMS+=" --n ${N} --k ${K} --num ${NUM} --subnode ${SUBNODE}"
-#PARAMS+=" --iterations ${ITERATIONS} --eps ${EPS} --damping ${DAMPING}"
 
 # mpich
 MPIRUN_CMD=${MPIRUN_CMD:="$ROOT_DIR/3rd/mpich/bin/mpiexec.hydra"}
