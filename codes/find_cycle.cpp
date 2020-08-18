@@ -37,6 +37,7 @@ void dfs(int u) {
 
 int main()
 {
+    freopen("/apsarapangu/disk1/ldbc-data/social_network_person.300/person_knows_person.csv", "r", stdin);
     int u, v;
     while (~scanf("%d,%d", &u, &v)) {
         if (u != v) {
