@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
   // read subnode
   // bitmap_spec_t existed(graph_info.vertices_);
   std::shared_ptr<bitmap_spec_t> existed(new bitmap_spec_t(graph_info.vertices_ + 1));
-  existed.clear();
+  existed->clear();
   {
     std::ifstream fin{FLAGS_subnode};
     // std::unordered_set subnode;
@@ -124,9 +124,8 @@ opts.global_size_ = MBYTES;
         //   }
         //   LOG(INFO) << log;
         // }
-        std::vector<std::vector<int>> path_bin;
-        path_bin.push_back(std::vector<int>(1, v_i));
-        return (*path).push_back(path_bin);
+        (*path).push_back(std::vector<int>(1, v_i));
+        return 1;
       },
       existed.get()
     );
