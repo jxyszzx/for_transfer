@@ -1,6 +1,29 @@
 load("//build_tools/rules:variables.bzl", "PLATO_OPTS")
 
 cc_binary (
+    name = "max-matching-fast",
+    srcs = [
+        "max-matching-fast.cc",
+    ],
+    copts = ['-g', '-O2', ] + PLATO_OPTS,
+    linkopts = [ ] + PLATO_OPTS,
+    deps = [
+        "//3rd/glog:glog",
+        "//3rd/gflags:gflags",
+        "//3rd/boost:boost_include",
+        "//3rd/boost:boost_iostreams",
+
+        "//plato/util:perf",
+        "//plato/util:atomic",
+        "//plato/graph:graph",
+    ],
+    defines = [
+        # "__DCSC_DEBUG__",
+    ],
+    linkstatic = 1,
+)
+
+cc_binary (
     name = "n-hop",
     srcs = [
         "n-hop.cc",

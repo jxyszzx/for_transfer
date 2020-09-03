@@ -27,6 +27,8 @@
 #include "plato/util/atomic.hpp"
 #include "plato/graph/graph.hpp"
 
+#define PRINT_DEBUG
+
 DEFINE_string(input,       "",     "input file, in csv format, without edge data");
 DEFINE_string(output,      "",      "output directory");
 DEFINE_bool(is_directed,   true,  "is graph directed or not");
@@ -44,6 +46,15 @@ void init(int argc, char** argv) {
   google::LogToStderr();
 }
 
+// void print(std::shared_ptr<matching_state_t> x, string from, std::shared_ptr<bitmap_spec_t> active) {
+//   s->foreach<int> (
+//     [&](plato::vid_t v_i, int* val) {
+//       LOG(INFO) << from << "[" << v_i << "]: " << (*val);
+//       return 0;
+//     }, active.get()
+//   );
+// }
+
 int main(int argc, char** argv) {
   plato::stop_watch_t watch;
   auto& cluster_info = plato::cluster_info_t::get_instance();
@@ -60,15 +71,24 @@ int main(int argc, char** argv) {
   using graph_spec_t         = std::remove_reference<decltype(*pdcsc)>::type;
   using partition_t          = graph_spec_t::partition_t;
   using adj_unit_list_spec_t = graph_spec_t::adj_unit_list_spec_t;
-  using state_t = plato::dense_state_t<int, partition_t>;
+  using matching_state_t = plato::dense_state_t<int, partition_t>;
   using bitmap_spec_t        = plato::bitmap_t<>;
 
+  auto print = [&](std::shared_ptr<matching_state_t> x, std::string from, std::shared_ptr<bitmap_spec_t> active) {
+    x->foreach<int> (
+      [&](plato::vid_t v_i, int* val) {
+        LOG(INFO) << from << "[" << v_i << "]: " << (*val);
+        return 0;
+      }, active.get()
+    );
+  };
+  
 // plato::bsp_opts_t opts;
 // opts.local_capacity_ = PAGESIZE;
 // opts.global_size_ = MBYTES;
   
-  std::shared_ptr<path_state_t> p(new state_t(graph_info.max_v_i_, pdcsc->partitioner()));
-  std::shared_ptr<path_state_t> s(new state_t(graph_info.max_v_i_, pdcsc->partitioner()));
+  std::shared_ptr<matching_state_t> p(new matching_state_t(graph_info.max_v_i_, pdcsc->partitioner()));
+  std::shared_ptr<matching_state_t> s(new matching_state_t(graph_info.max_v_i_, pdcsc->partitioner()));
   // bitmap_spec_t existed(graph_info.vertices_);
   std::shared_ptr<bitmap_spec_t> curr(new bitmap_spec_t(graph_info.vertices_));
   std::shared_ptr<bitmap_spec_t> next(new bitmap_spec_t(graph_info.vertices_));
@@ -79,6 +99,11 @@ int main(int argc, char** argv) {
   next->clear();
   next_p2->clear();
   next_p3->clear();
+
+  //
+  std::shared_ptr<bitmap_spec_t> all(new bitmap_spec_t(graph_info.vertices_));
+  all->fill();
+  //
 
   watch.mark("t_oneround");
   watch.mark("t_algo");
@@ -100,9 +125,8 @@ int main(int argc, char** argv) {
       *val = -1;
       return 1;
     }
-  )
+  );
   
-  plato::vid_t actives = 0; 
   for (uint32_t epoch_i = 0; actives != 0; ++epoch_i) {
     if (0 == cluster_info.partition_id_) {
       LOG(INFO) << "[epoch-" << epoch_i  << "] init-next cost: "
@@ -115,7 +139,7 @@ int main(int argc, char** argv) {
         *val = -1;
         return 1;
       }, curr.get()
-    )
+    );
 
     actives = plato::aggregate_message<int, int, graph_spec_t> (*pdcsc,
       [&](const context_spec_t& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
@@ -129,7 +153,7 @@ int main(int argc, char** argv) {
             if (mx == -1) {
               mx = src;
             } else {
-              mx = max(mx, src);
+              mx = std::max(mx, (int)src);
             }
           }
         }
@@ -145,6 +169,12 @@ int main(int argc, char** argv) {
       // ,opts
     );
 
+#ifdef PRINT_DEBUG
+LOG(INFO) << "phase 1";
+print(s, "s", all);
+print(p, "p", all);
+#endif
+
     // step 2
     actives = plato::aggregate_message<std::vector<int>, int, graph_spec_t> (*pdcsc,
       [&](const context_spec_t2& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
@@ -153,7 +183,7 @@ int main(int argc, char** argv) {
         std::vector<int> _candidate;
         for (auto it = adjs.begin_; adjs.end_ != it; ++it) {
           plato::vid_t src = it->neighbour_;
-// LOG(INFO) << src << " is nbr of " << v_i;
+LOG(INFO) << src << " is nbr of " << v_i << ", p:" << (*p)[src];
           if ((*p)[src] == v_i) {
             _candidate.push_back(src);
           }
@@ -164,9 +194,11 @@ int main(int argc, char** argv) {
       },
       [&](int /*p_i*/, message_spec_t2& msg) {
         for (auto v : msg.message_) {
-          if (v == msg.v_i_) {
-            next_p2->set_bit(v);
+LOG(INFO) << "Receive: " << msg.v_i_ << '-' << v;
+          if ((*p)[msg.v_i_] == v) {
             next_p2->set_bit(msg.v_i_);
+            (*s)[msg.v_i_] = (*p)[msg.v_i_];
+LOG(INFO) << "Receive: " << v << ' ' << msg.v_i_;
             return 1;
           }
         }
@@ -174,21 +206,17 @@ int main(int argc, char** argv) {
       }
       // ,opts
     );
+#ifdef PRINT_DEBUG
+LOG(INFO) << "phase 2";
+print(s, "s", all);
+print(p, "p", all);
+
+LOG(INFO) << next_p2->count();
+#endif
 
     // step 3
-    actives = plato::aggregate_message<int, int, graph_spec_t> (*pdcsc,
-      [&](const context_spec_t& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
-        if (!next_p2->get_bit(v_i)) { return; }
-        
-        context.send(message_spec_t { v_i, v_i });
-      },
-      [&](int /*p_i*/, message_spec_t& msg) {
-        s[msg.v_i_] = p[msg.v_i_];
-
-        return 1;
-      }
-      // ,opts
-    );
+next_p2->sync();
+LOG(INFO) << next_p2->count();
 
     plato::aggregate_message<int, int, graph_spec_t> (*pdcsc,
       [&](const context_spec_t& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
@@ -196,13 +224,11 @@ int main(int argc, char** argv) {
 
         for (auto it = adjs.begin_; adjs.end_ != it; ++it) {
           plato::vid_t src = it->neighbour_;
-// LOG(INFO) << src << " is nbr of " << v_i;
+LOG(INFO) << "phase 3 " << src << " is nbr of " << v_i;
           if ((*p)[src] == v_i && (*s)[src] == -1) {
             next_p3->set_bit(src);
           }
         }
-
-        context.send(message_spec_t { v_i, v_i });
       },
       [&](int /*p_i*/, message_spec_t& msg) {
         return 0;
@@ -215,6 +241,7 @@ int main(int argc, char** argv) {
     next_p2->clear();
     next->clear();
 
+    curr->sync();
     actives = curr->count();
   } 
 
@@ -235,29 +262,23 @@ int main(int argc, char** argv) {
     LOG(INFO) << "number of matching pairs=" << actives;
   }
 
-  // watch.mark("t_output");
-  // {  // save result to hdfs
-  //   plato::thread_local_fs_output os(FLAGS_output, (boost::format("%04d_") % cluster_info.partition_id_).str(), true);
-  //   found_path->foreach<int> (
-  //     [&](plato::vid_t v_i, std::vector<std::vector<int>>* path) {
-  //       if ((*path).size() == 0) return 0;
-  //       auto& fs_output = os.local();
+  watch.mark("t_output");
+  {  // save result to hdfs
+    plato::thread_local_fs_output os(FLAGS_output, (boost::format("%04d_") % cluster_info.partition_id_).str(), true);
+    s->foreach<int> (
+      [&](plato::vid_t v_i, int* val) {
+        if ((*val) != -1) {
+          auto& fs_output = os.local();
+          fs_output << "s[" << v_i << "]:" << (*val) << "\n"; 
+        }  
+        return 0;
+      }
+    );
+  }
 
-  //       fs_output << "node : " << v_i << ' ' << (*path).size() << "\n";
-  //       // fs_output << "node : " << v_i << "\n";
-  //       // for (auto perpath : (*path)) {
-  //       //   for (auto vnode : perpath) {
-  //       //     fs_output << vnode << ",";
-  //       //   }
-  //       //   fs_output << "\n";
-  //       // }
-  //       return 0;
-  //     }
-  //   );
-  // }
-  // if (0 == cluster_info.partition_id_) {
-  //   LOG(INFO) << "save result cost: " << watch.show("t_output") / 1000.0 << "s";
-  // }
+  if (0 == cluster_info.partition_id_) {
+    LOG(INFO) << "save result cost: " << watch.show("t_output") / 1000.0 << "s";
+  }
 
   return 0;
 }
