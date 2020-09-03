@@ -10,14 +10,14 @@ MAIN="$ROOT_DIR/bazel-bin/example/n-hop" # process name
 WNUM=4
 WCORES=4
 
-INPUT=${INPUT:="$ROOT_DIR/data/graph/nodes.csv"}
-# INPUT=${INPUT:="$ROOT_DIR/data/graph/v100_e2150_ua_c3.csv"}
-SUBNODE=${SUBNODE:="$ROOT_DIR/data/graph/nodes.txt"}
+
+INPUT=${INPUT:="/apsarapangu/disk1/ldbc-data/social_network_person.300/person_knows_person.csv"}
+SUBNODE=${SUBNODE:="$ROOT_DIR/data/graph/ldbc_nodes.txt"}
 OUTPUT=${OUTPUT:="/tmp/n-hop"}
 IS_DIRECTED=${IS_DIRECTED:=false}
 N=${N:=5}
 K=${K:=4}
-NUM=${NUM:=2000}
+NUM=${NUM:=100000}
 
 # param
 PARAMS+=" --threads ${WCORES}"

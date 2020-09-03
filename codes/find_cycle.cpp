@@ -25,13 +25,15 @@ void dfs(int u) {
 
     int depth = path.size();
     for (auto v : G[u]) {
-        if (v == G[u][0] && depth >= depth_lb) {
+        if (v == path[0] && depth >= depth_lb) {
             print(path, v);
         }
         if (!vis[v] && depth < depth_ub) {
             dfs(v);
         }
     }
+
+    vis[u] = false;
     path.pop_back();
 }
 
@@ -47,7 +49,7 @@ int main()
     }
 
     cnt = 0;
-    dfs(333988, 1);
+    dfs(333988);
 
     return 0;
 }
