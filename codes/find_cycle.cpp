@@ -26,7 +26,8 @@ void dfs(int u) {
     int depth = path.size();
     for (auto v : G[u]) {
         if (v == path[0] && depth >= depth_lb) {
-            print(path, v);
+            // print(path, v);
+            ++cnt;
         }
         if (!vis[v] && depth < depth_ub) {
             dfs(v);
@@ -39,6 +40,7 @@ void dfs(int u) {
 
 int main()
 {
+    double t1 = clock();
     freopen("/apsarapangu/disk1/ldbc-data/social_network_person.300/person_knows_person.csv", "r", stdin);
     int u, v;
     while (~scanf("%d,%d", &u, &v)) {
@@ -48,8 +50,12 @@ int main()
         }
     }
 
-    cnt = 0;
-    dfs(333988);
+    int list[4] = {333988, 1090493,904532,829192};
+    for (int i =0; i < 4; ++i) {
+        cnt = 0;
+        dfs(list[i]);
+        printf("root: %d, Num: %d, time cost: %lf\n", list[i], cnt, (clock() - t1) / CLOCKS_PER_SEC);
+    }
 
     return 0;
 }
