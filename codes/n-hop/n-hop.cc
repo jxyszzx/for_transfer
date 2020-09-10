@@ -25,6 +25,8 @@ void init(int argc, char** argv) {
 
 int main(int argc, char** argv) {
   double total_time = 0;
+  double mx_time = -1;
+  double min_time = 1e8;
 
   plato::stop_watch_t watch;
   auto& cluster_info = plato::cluster_info_t::get_instance();
@@ -62,7 +64,7 @@ int main(int argc, char** argv) {
     existed->clear();
     {
       int u;
-      for (int i = 0; i < min(20, FLAGS_sub_round); ++i) {
+      for (int i = 0; i < std::min((uint32_t)20, FLAGS_sub_round); ++i) {
         fin >> u;
         existed->set_bit(u);
       }
@@ -150,6 +152,8 @@ int main(int argc, char** argv) {
     if (0 == cluster_info.partition_id_) {
       double time_cost = watch.show("t_algo") / 1000.0;
       total_time += time_cost;
+      min_time = std::min(time_cost, min_time);
+      mx_time = std::max(time_cost, mx_time);
       LOG(INFO) << "n-hop cost: " << time_cost << "s";
     }
 
@@ -178,6 +182,7 @@ int main(int argc, char** argv) {
     //   LOG(INFO) << "save result cost: " << watch.show("t_output") / 1000.0 << "s";
     // }
   }
+  printf("max_time: %.3lf, min_time: %.3lf, avg_time: %.3lf\n", mx_time, min_time, total_time/10.0);
   return 0;
 }
 
