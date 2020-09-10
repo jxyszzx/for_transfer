@@ -1,4 +1,4 @@
-for machine in `cat hosts_16`
+for machine in `cat host_list_7`
 do
     OP="cd $2 ; sudo rm -r $1"
     echo "SSH to "$machine
