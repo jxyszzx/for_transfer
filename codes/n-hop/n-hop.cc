@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
       for (int i = 0; i < std::min((uint32_t)20, FLAGS_sub_round); ++i) {
         fin >> u;
         existed->set_bit(u);
-	printf("Round %d: find %d\n", i, u);
+	      printf("Round %d: find %d\n", round_i, u);
       }
       for (int i = FLAGS_sub_round; i < 20; ++i) {
         fin >> u;
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
       watch.mark("t_oneround");
 
       if (epoch_i == 0) {
-        plato::vid_t newers = next_path->foreach<int> (
+        next_path->foreach<int> (
           [&](plato::vid_t v_i, std::vector<std::vector<int>>* path) {
             (*path).push_back(std::vector<int>(1, v_i));
             return 1;
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
           existed.get()
         );
       } else {
-        actives = plato::aggregate_message<std::vector<std::vector<int>>, int, graph_spec_t> (*pdcsc,
+        plato::aggregate_message<std::vector<std::vector<int>>, int, graph_spec_t> (*pdcsc,
           [&](const context_spec_t& context, plato::vid_t v_i, const adj_unit_list_spec_t& adjs) {
             std::vector<std::vector<int>> path_bin;
             for (auto it = adjs.begin_; adjs.end_ != it; ++it) {
@@ -179,9 +179,6 @@ int main(int argc, char** argv) {
         }
       );
     }
-    // if (0 == cluster_info.partition_id_) {
-    //   LOG(INFO) << "save result cost: " << watch.show("t_output") / 1000.0 << "s";
-    // }
   }
   if (0 == cluster_info.partition_id_) {
     printf("max_time: %.3lf, min_time: %.3lf, avg_time: %.3lf\n", mx_time, min_time, total_time/10.0);
