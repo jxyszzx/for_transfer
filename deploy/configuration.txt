@@ -1,0 +1,3 @@
+## cannot resolve github.com
+`vim /etc/hosts`
+`192.30.255.112 github.com`

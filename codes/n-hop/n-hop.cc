@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
   std::vector<std::mutex> mtx_next(graph_info.vertices_), mtx_found(graph_info.vertices_);
   
   std::ifstream fin{FLAGS_subnode};
-  for (int i = 0; i < 10; ++i) {
+  for (int round_i = 0; round_i < 10; ++round_i) {
     std::shared_ptr<path_state_t> curr_path(new path_state_t(graph_info.vertices_, pdcsc->partitioner()));
     std::shared_ptr<path_state_t> next_path(new path_state_t(graph_info.vertices_, pdcsc->partitioner()));
     std::shared_ptr<path_state_t> found_path(new path_state_t(graph_info.vertices_, pdcsc->partitioner()));
@@ -183,7 +183,9 @@ int main(int argc, char** argv) {
     //   LOG(INFO) << "save result cost: " << watch.show("t_output") / 1000.0 << "s";
     // }
   }
-  printf("max_time: %.3lf, min_time: %.3lf, avg_time: %.3lf\n", mx_time, min_time, total_time/10.0);
+  if (0 == cluster_info.partition_id_) {
+    printf("max_time: %.3lf, min_time: %.3lf, avg_time: %.3lf\n", mx_time, min_time, total_time/10.0);
+  }
   return 0;
 }
 
