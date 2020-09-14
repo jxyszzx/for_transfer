@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
       for (int i = 0; i < std::min((uint32_t)20, FLAGS_sub_round); ++i) {
         fin >> u;
         existed->set_bit(u);
+	printf("Round %d: find %d\n", i, u);
       }
       for (int i = FLAGS_sub_round; i < 20; ++i) {
         fin >> u;
