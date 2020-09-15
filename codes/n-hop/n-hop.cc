@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <utility>
+#include <unordered_set>
 
 #include "plato/util/perf.hpp"
 #include "plato/util/atomic.hpp"
@@ -25,7 +26,7 @@ void init(int argc, char** argv) {
   google::LogToStderr();
 }
 
-unordered_set<int> to_run_;
+std::unordered_set<int> to_run_;
 
 void set_run_info() {
   std::ifstream fin{FLAGS_to_run};
@@ -201,7 +202,7 @@ int main(int argc, char** argv) {
     }
   }
   if (0 == cluster_info.partition_id_) {
-    printf("max_time: %.3lf, min_time: %.3lf, avg_time: %.3lf\n", mx_time, min_time, total_time/10.0);
+    printf("max_time: %.3lf, min_time: %.3lf, total_time: %.3lf\n", mx_time, min_time, total_time);
   }
   return 0;
 }
