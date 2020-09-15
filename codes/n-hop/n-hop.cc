@@ -16,11 +16,25 @@ DEFINE_uint32(k,           4,      "len of cycle >= k");
 DEFINE_uint32(num,         1,      "num of cycle");
 DEFINE_string(subnode,     "",     "subnode");
 DEFINE_uint32(sub_round,   10,     "nodes number for one round");
+DEFINE_string(to_run,      "",     "round to run");
+
 
 void init(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   google::LogToStderr();
+}
+
+unordered_set<int> to_run_;
+
+void set_run_info() {
+  std::ifstream fin{FLAGS_to_run};
+  if (!fin) return;
+  
+  int u;
+  while (fin >> u) {
+    to_run_.insert(u);
+  }
 }
 
 int main(int argc, char** argv) {
@@ -49,13 +63,15 @@ int main(int argc, char** argv) {
   using message_spec_t       = plato::mepa_ag_message_t<std::vector<std::vector<int>>>;
 
   plato::bsp_opts_t opts;
-  opts.local_capacity_ = PAGESIZE/4;
+  opts.local_capacity_ = PAGESIZE/16;
   opts.global_size_ = 16*MBYTES;
   
   std::vector<std::mutex> mtx_next(graph_info.vertices_), mtx_found(graph_info.vertices_);
   
+  set_run_info();
+
   std::ifstream fin{FLAGS_subnode};
-  for (int round_i = 0; round_i < 10; ++round_i) {
+  for (int round_i = 1; round_i <= 10; ++round_i) {
     std::shared_ptr<path_state_t> curr_path(new path_state_t(graph_info.vertices_, pdcsc->partitioner()));
     std::shared_ptr<path_state_t> next_path(new path_state_t(graph_info.vertices_, pdcsc->partitioner()));
     std::shared_ptr<path_state_t> found_path(new path_state_t(graph_info.vertices_, pdcsc->partitioner()));
@@ -74,6 +90,10 @@ int main(int argc, char** argv) {
       }
     }
 
+    if (to_run_.find(round_i) == to_run_.end()) {
+      continue;
+    }
+    
     watch.mark("t_oneround");
     watch.mark("t_algo");
 
